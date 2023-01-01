@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import time
 import gc
 import os
 import sys
@@ -22,6 +23,8 @@ from logdeep.dataset.sample import session_window
 from logdeep.tools.utils import (save_parameters, seed_everything,
                                  train_val_split)
 
+global result_filename
+result_filename = f"times_result_{time.time()}.csv"
 
 def generate(name):
     window_size = 10
@@ -58,11 +61,11 @@ class Predicter():
         model.load_state_dict(torch.load(self.model_path)['state_dict'])
         model.eval()
         print('model_path: {}'.format(self.model_path))
-        test_normal_loader, test_normal_length = generate('hdfs_test_normal_one')
+        test_normal_loader, test_normal_length = generate('hdfs_test_normal')
         test_abnormal_loader, test_abnormal_length = generate(
-            'hdfs_test_abnormal_one')
+            'hdfs_test_abnormal')
         df = pd.DataFrame(columns=["start_time",	"logs_seq", 	"new_log",	"dataset_type","end_time"])
-        df.to_csv(rf"{self.save_dir}/times_result.csv")
+        df.to_csv(rf"{self.save_dir}/{result_filename}")
         TP = 0
         FP = 0
         dict_list = []
@@ -94,7 +97,7 @@ class Predicter():
                         predicted = torch.argsort(output,
                                                 1)[0][-self.num_candidates:]
                         # df = pd.concat(df, pd.Datadf_row_dict, ignore_index=True)
-                        if k%1000 == 0:
+                        if len(dict_list)%50000 == 0:
                             print("dumping")
                             dict_list = self.dump_csv(dict_list)
                 if label not in predicted:
@@ -145,7 +148,7 @@ class Predicter():
     def dump_csv(self, dict_list):
         df = pd.DataFrame.from_records(dict_list)
         dict_list = []
-        df.to_csv(rf"{self.save_dir}/times_result.csv", mode='a', header=False)
+        df.to_csv(rf"{self.save_dir}/{result_filename}", mode='a', header=False)
         df = df[0:0]
         return dict_list
 
